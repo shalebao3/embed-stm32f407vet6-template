@@ -1,9 +1,10 @@
-# Start：启动与内核支持
+# Start：STM32F407 启动与内核支持
 
-本目录只负责 STM32F103C8T6 的启动、CMSIS 兼容和链接布局，不放业务外设初始化。
+本目录只负责 STM32F407VET6 的启动和链接布局，不放 FOC 业务外设初始化。
 
-- `startup.cmake`：统一选择 CMSIS、system 和 GNU 启动文件。
-- `cmsis-compat.cmake`：针对固定旧版 CMSIS 的 GNU 构建兼容处理，只生成构建目录副本。
-- `STM32F103xx_FLASH.ld`：64KB Flash / 20KB RAM 链接脚本。
+- `startup.cmake`：统一选择 CMSIS system 文件与 GNU 启动文件。
+- `STM32F407VETX_FLASH.ld`：512 KiB Flash、128 KiB SRAM、64 KiB CCMRAM。
+- 启动文件：`startup_stm32f407xx.s`。
+- system 文件：`system_stm32f4xx.c`。
 
-第三方标准库仍固定在 `Libraries/STM32F10x_StdPeriph_Lib` 子模块中，不复制源码到本目录。
+注意：CCMRAM 适合 CPU 高频数据，但 DMA1/DMA2 无法访问，后续 ADC/DMA 采样缓冲区不能放入 CCMRAM。

@@ -1,7 +1,7 @@
 {
   "configurations": [
     {
-      "name": "STM32F103C8T6-StdPeriph",
+      "name": "STM32F407VET6-CMSIS",
       "compileCommands": [
         "${workspaceFolder}/firmware/build/Debug/compile_commands.json"
       ],
