@@ -46,6 +46,10 @@ add_executable(${CMAKE_PROJECT_NAME}
     ${STM32_STARTUP_SOURCES}
 )
 
+# CMake's Generic platform does not guarantee an executable suffix.
+# Force the firmware ELF name so local builds and CI have a stable artifact contract.
+set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES SUFFIX ".elf")
+
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     src/User
     src/App
