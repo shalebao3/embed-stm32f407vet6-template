@@ -8,34 +8,31 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-set(CMAKE_PROJECT_NAME stm32f103_std_template)
+set(CMAKE_PROJECT_NAME embed_foc)
 project(${CMAKE_PROJECT_NAME} LANGUAGES C ASM)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(MCU_FLAGS
-    -mcpu=cortex-m3
+    -mcpu=cortex-m4
     -mthumb
+    -mfpu=fpv4-sp-d16
+    -mfloat-abi=hard
 )
 
-set(STDPERIPH_ROOT "${CMAKE_SOURCE_DIR}/Libraries/STM32F10x_StdPeriph_Lib")
-set(STDPERIPH_DRIVER "${STDPERIPH_ROOT}/Libraries/STM32F10x_StdPeriph_Driver")
+set(CMSIS_ROOT "${CMAKE_SOURCE_DIR}/Libraries/CMSIS")
+set(CMSIS_CORE "${CMSIS_ROOT}/Core/Include")
+set(CMSIS_DEVICE "${CMSIS_ROOT}/Device/ST/STM32F4xx")
 
-if(NOT EXISTS "${STDPERIPH_DRIVER}/src/stm32f10x_gpio.c")
+if(NOT EXISTS "${CMSIS_DEVICE}/Include/stm32f407xx.h")
     message(FATAL_ERROR
-        "STM32F10x 固定 vendor 标准库不完整：缺少 stm32f10x_gpio.c。"
-        "请从模板仓库恢复 firmware/Libraries/STM32F10x_StdPeriph_Lib。"
+        "STM32F407 CMSIS device files are incomplete. "
+        "Restore firmware/Libraries/CMSIS from the repository."
     )
 endif()
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/Start/startup.cmake")
 
-file(GLOB STDPERIPH_SOURCES CONFIGURE_DEPENDS
-    "${STDPERIPH_DRIVER}/src/*.c"
-)
-
-# 模板中的业务目录全部纳入自动发现。后续新增 .c 文件时，
-# CMake 会因 CONFIGURE_DEPENDS 自动重新配置，不需要逐个维护源码列表。
 file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/src/User/*.c"
     "${CMAKE_SOURCE_DIR}/src/App/*.c"
@@ -44,32 +41,14 @@ file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/src/Common/*.c"
 )
 
-add_library(stm32_stdperiph STATIC
-    ${STDPERIPH_SOURCES}
-)
-
-target_include_directories(stm32_stdperiph PUBLIC
-    "${CMAKE_SOURCE_DIR}/src/User"
-    "${STDPERIPH_DRIVER}/inc"
-    ${STM32_STARTUP_INCLUDE_DIRS}
-)
-
-target_compile_definitions(stm32_stdperiph PUBLIC
-    STM32F10X_MD
-    USE_STDPERIPH_DRIVER
-)
-
-target_compile_options(stm32_stdperiph PRIVATE
-    ${MCU_FLAGS}
-    -Wall
-    -ffunction-sections
-    -fdata-sections
-)
-
 add_executable(${CMAKE_PROJECT_NAME}
     ${PROJECT_SOURCES}
     ${STM32_STARTUP_SOURCES}
 )
+
+# CMake's Generic platform does not guarantee an executable suffix.
+# Force the firmware ELF name so local builds and CI have a stable artifact contract.
+set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES SUFFIX ".elf")
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     src/User
@@ -77,11 +56,11 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     src/Driver
     src/Bsp
     src/Common
+    ${STM32_STARTUP_INCLUDE_DIRS}
 )
 
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
-    STM32F10X_MD
-    USE_STDPERIPH_DRIVER
+    STM32F407xx
 )
 
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
@@ -94,15 +73,13 @@ target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -O0 -g3)
-    target_compile_options(stm32_stdperiph PRIVATE -O0 -g3)
 else()
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Os)
-    target_compile_options(stm32_stdperiph PRIVATE -Os)
 endif()
 
 target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
     ${MCU_FLAGS}
-    "-T${CMAKE_SOURCE_DIR}/Start/STM32F103xx_FLASH.ld"
+    "-T${CMAKE_SOURCE_DIR}/Start/STM32F407VETX_FLASH.ld"
     --specs=nano.specs
     --specs=nosys.specs
     -Wl,--gc-sections
@@ -111,7 +88,6 @@ target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
-    stm32_stdperiph
     m
 )
 

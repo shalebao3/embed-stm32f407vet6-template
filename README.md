@@ -1,38 +1,39 @@
-# STM32F103C8T6 电赛标准库工程模板
+# embed-FOC
 
-用于后续电子设计竞赛项目的 STM32F103C8T6 基础脚手架。
+STM32F407VET6 的 FOC 学习与三相电机控制工程。
 
-当前 `main` 固定为：
+当前仓库已从 STM32F103C8T6 模板迁移为 **STM32F407VET6 初始工程**。本阶段只冻结 MCU、启动、链接、CMSIS 和工程分层，不提前绑定具体 Gate Driver、FOC 外设方案和引脚。
 
-- MCU：STM32F103C8T6
-- STM32F10x Standard Peripheral Library V3.5.0
-- arm-none-eabi-gcc
-- CMake + Ninja
-- VSCode + Cortex-Debug
-- ST-Link
-- 不使用 CubeMX
-- 不使用 HAL
+## 当前基线
 
-模板只保留可跨题复用的工程基础设施。ADC、TIM、DMA、量程、电机等具体业务配置不预置，避免上一道题的实现污染下一道题。
+- MCU：STM32F407VET6（Cortex-M4F）
+- Flash：512 KiB
+- SRAM1 + SRAM2：128 KiB
+- CCMRAM：64 KiB
+- 编译器：arm-none-eabi-gcc
+- 构建：CMake + Ninja
+- 调试：ST-Link / Cortex-Debug
+- CMSIS Device：STM32F407xx
+- FPU：FPv4-SP-D16，hard-float ABI
+- 当前系统时钟：复位默认 HSI 16 MHz
+- 当前不预置 HAL / Standard Peripheral Library
+- 当前不预置 TIM / ADC / DMA / I2C / SPI / PWM 业务配置
 
-## 目录分层
+先保持 CMSIS-only，是为了把“C8T6 模板迁移到 F407”和“FOC 外设/驱动板设计”拆开。等 Gate Driver、采样拓扑和 Pin Map 确定后，再按实际方案加入 Driver，避免把未经确认的 PWM/ADC 配置固化进初始工程。
+
+## 目录
 
 ```text
 .
-├── .github/
-│   └── workflows/
-│       └── firmware-build.yml
+├── .github/workflows/
 ├── .vscode/
 ├── firmware/
+│   ├── Libraries/
+│   │   └── CMSIS/
 │   ├── Start/
 │   │   ├── startup.cmake
-│   │   ├── cmsis-compat.cmake
-│   │   └── STM32F103xx_FLASH.ld
-│   ├── Libraries/
-│   │   └── STM32F10x_StdPeriph_Lib/
-│   │       ├── Libraries/
-│   │       ├── VENDOR_INFO.md
-│   │       └── VENDOR_MANIFEST.json
+│   │   ├── STM32F407VETX_FLASH.ld
+│   │   └── README.md
 │   ├── cmake/
 │   ├── src/
 │   │   ├── User/
@@ -46,52 +47,18 @@
 └── README.md
 ```
 
-### 分层职责
+## 分层职责
 
 | 目录 | 职责 |
 | --- | --- |
-| `Start` | 启动文件、CMSIS 兼容、链接脚本 |
-| `User` | main、中断入口、标准库配置 |
-| `App` | 赛题业务流程、状态机、算法编排 |
-| `Driver` | STM32 片内 ADC/TIM/DMA/UART 等驱动 |
-| `Bsp` | 板级 GPIO 与外部器件映射 |
-| `Common` | 与赛题无关的通用组件 |
+| `User` | main 与中断入口 |
+| `App` | FOC 状态机、控制模式与算法编排 |
+| `Driver` | STM32 片内 TIM / ADC / DMA / I2C / SPI 等驱动 |
+| `Bsp` | FOC 驱动板引脚、Gate Driver、编码器等板级映射 |
+| `Common` | 时间基准等跨模块通用能力 |
+| `Start` | 启动文件、CMSIS system、链接布局 |
 
-当前 `Common` 预置 `Com_Time`，统一提供 1ms SysTick 时间基准。
-
-### 标准库管理
-
-`firmware/Libraries/STM32F10x_StdPeriph_Lib` 已作为普通 Git tracked files 固化到模板仓库，不再使用 Git Submodule。新项目通过 **Use this template** 创建或普通 `git clone` 后即可直接构建，不需要额外初始化子模块。
-
-标准库来源与固定上游提交记录在 `VENDOR_INFO.md` / `VENDOR_MANIFEST.json`。业务开发不要修改该目录；CI 会校验 vendor 文件的 blob SHA。
-
-
-## 为什么不把 2011G 的 ADC 和自动量程一起带进来
-
-2011G 的 `Driver_ADC` 固定了 ADC1、PA0、Channel 0、软件触发和轮询 EOC；`bsp_Range` 又固定了继电器量程引脚。这些都属于具体赛题实现，不是模板基础设施。
-
-下一道题可能需要：
-
-- TIM 触发 ADC
-- ADC + DMA Circular
-- 多通道扫描
-- 输入捕获
-- PWM
-- 编码器接口
-
-因此模板只保留分层位置，不预设外设方案。
-
-## 首次使用
-
-标准库已经随模板仓库提供，无需执行任何 submodule 初始化命令。
-
-确认工具链：
-
-```bash
-arm-none-eabi-gcc --version
-cmake --version
-ninja --version
-```
+当前 `Common` 保留 `Com_Time`，使用 SysTick 提供 1 ms 软件时间基准。
 
 ## 构建
 
@@ -105,70 +72,38 @@ cmake -S firmware -B firmware/build/Debug -G Ninja \
 cmake --build firmware/build/Debug
 ```
 
-构建输出：
+输出：
 
 ```text
 firmware/build/Debug/
-├── stm32f103_std_template.elf
-├── stm32f103_std_template.hex
-├── stm32f103_std_template.bin
-└── stm32f103_std_template.map
+├── embed_foc.elf
+├── embed_foc.hex
+├── embed_foc.bin
+└── embed_foc.map
 ```
 
-GitHub Actions 会同时验证 Debug / Release，并检查 CMSIS 兼容处理、源码分层和 BIN/HEX/MAP 产物。
+GitHub Actions 同时编译 Debug / Release，并验证：
 
-## 新电赛题的推荐起步方式
+- Cortex-M4F / FPU 编译参数；
+- `STM32F407xx` 目标宏；
+- F407 startup / system 只编译一份；
+- 512 KiB Flash / 128 KiB SRAM / 64 KiB CCMRAM 链接布局；
+- BIN / HEX / MAP 构建产物。
 
-1. 通过 GitHub 的 **Use this template** 创建新的题目仓库。
-2. 修改 `CMAKE_PROJECT_NAME` 为题目仓库名。
-3. 在 `App/` 创建业务入口，例如 `App_xxx.c/.h`。
-4. 按实际方案在 `Driver/` 增加 ADC、TIM、DMA 等驱动。
-5. 按实际硬件在 `Bsp/` 增加板级控制。
-6. 在 `main.c` 中完成初始化，并在主循环调用 `App_xxx_Task()`。
-7. 本地 Debug 构建通过后再提交，由 GitHub Actions 再验证 Debug / Release。
+## FOC 后续外设方向
 
-CMake 已使用 `CONFIGURE_DEPENDS` 自动发现上述源码目录中新加入的 `.c` 文件，因此通常不需要每增加一个模块就手工修改源码列表。
+驱动板原理图和 Pin Map 确定后再落代码，预计使用：
 
-## 架构原则
+- TIM1：三相互补 PWM、Dead Time、Break、ADC 触发；
+- ADC1 / ADC2：相电流采样；
+- DMA：是否使用取决于最终采样时序；
+- I2C：AS5600；
+- SPI：若 Gate Driver 采用 SPI 配置；
+- GPIO / EXTI：Enable、Fault 等。
 
-```text
-main / IRQ
-    │
-    ▼
-   App
-  / | \
- ▼  ▼  ▼
-Driver Bsp Common
-   \   |   /
-    标准外设库
-        │
-        ▼
-      寄存器
-        │
-        ▼
-      STM32
-```
+## 当前边界
 
-核心边界：
-
-- App 决定“做什么”。
-- Driver 决定“STM32 片内外设怎么工作”。
-- Bsp 决定“当前板子具体接到哪里、怎么驱动外部器件”。
-- Common 只放真正跨题通用能力。
-- 不修改固定版本的 vendor 标准库源码。
-
-## GitHub Template Repository
-
-建议在仓库 Settings → General 中勾选 **Template repository**。
-
-这样以后不要复制旧项目历史，也不需要重新搭工程：
-
-```text
-embed-stm32c8t6-template
-        ↓
-Use this template
-        ↓
-embed-xxxx-xxxx
-        ↓
-App + Driver + Bsp
-```
+- 不把 DRV8301 / DRV8323、AS5600 或 FOC 算法提前塞进初始工程。
+- 不提前固定 TIM1 / ADC / SPI / I2C 引脚，等驱动板 Pin Map 冻结后再配置。
+- ADC / DMA 缓冲区不要放进 CCMRAM；STM32F407 的 DMA1 / DMA2 无法访问 CCMRAM。
+- `firmware/Libraries/CMSIS` 是固定 vendor 代码，不在业务开发中修改。
