@@ -24,6 +24,9 @@ def main() -> None:
     core = cmsis / "Core" / "Include"
     project_source = firmware / "src"
 
+    for directory in ("user", "app", "driver", "bsp", "common"):
+        require((project_source / directory).is_dir(), "Missing src directory: " + directory)
+
     required_files = [
         core / "core_cm4.h",
         core / "cmsis_version.h",
@@ -36,12 +39,12 @@ def main() -> None:
         device / "Source" / "Templates" / "system_stm32f4xx.c",
         device / "Source" / "Templates" / "gcc" / "startup_stm32f407xx.s",
         firmware / "Start" / "STM32F407VETX_FLASH.ld",
-        project_source / "User" / "main.c",
-        project_source / "User" / "main.h",
-        project_source / "User" / "stm32f4xx_it.c",
-        project_source / "User" / "stm32f4xx_it.h",
-        project_source / "Common" / "Com_Time.c",
-        project_source / "Common" / "Com_Time.h",
+        project_source / "user" / "main.c",
+        project_source / "user" / "main.h",
+        project_source / "user" / "stm32f4xx_it.c",
+        project_source / "user" / "stm32f4xx_it.h",
+        project_source / "common" / "com_time.c",
+        project_source / "common" / "com_time.h",
     ]
     for path in required_files:
         require(path.is_file(), "Missing required file: " + str(path))
@@ -55,7 +58,7 @@ def main() -> None:
         "Legacy STM32F103 linker script still exists",
     )
     require(
-        not (project_source / "User" / "stm32f10x_it.c").exists(),
+        not (project_source / "user" / "stm32f10x_it.c").exists(),
         "Legacy STM32F10x interrupt file still exists",
     )
 
@@ -67,13 +70,11 @@ def main() -> None:
     commands = json.loads((build / "compile_commands.json").read_text(encoding="utf-8"))
 
     expected_units = {
-        "main.c": project_source / "User" / "main.c",
-        "stm32f4xx_it.c": project_source / "User" / "stm32f4xx_it.c",
-        "Com_Time.c": project_source / "Common" / "Com_Time.c",
-        "system_stm32f4xx.c":
-            device / "Source" / "Templates" / "system_stm32f4xx.c",
-        "startup_stm32f407xx.s":
-            device / "Source" / "Templates" / "gcc" / "startup_stm32f407xx.s",
+        "main.c": project_source / "user" / "main.c",
+        "stm32f4xx_it.c": project_source / "user" / "stm32f4xx_it.c",
+        "com_time.c": project_source / "common" / "com_time.c",
+        "system_stm32f4xx.c": device / "Source" / "Templates" / "system_stm32f4xx.c",
+        "startup_stm32f407xx.s": device / "Source" / "Templates" / "gcc" / "startup_stm32f407xx.s",
     }
 
     for filename, expected_path in expected_units.items():
@@ -98,7 +99,7 @@ def main() -> None:
 
     require("STM32F10" not in all_commands, "Build commands still reference STM32F10x")
 
-    project = "embed_foc"
+    project = "stm32f407_template"
     for suffix in (".elf", ".bin", ".hex", ".map"):
         artifact = build / (project + suffix)
         require(
@@ -107,8 +108,8 @@ def main() -> None:
         )
 
     print(
-        "PASS: STM32F407VET6 CMSIS base, Cortex-M4F flags, startup/system units, "
-        "memory layout and firmware artifacts"
+        "PASS: STM32F407VET6 CMSIS base, lowercase source layout, Cortex-M4F flags, "
+        "startup/system units, memory layout and firmware artifacts"
     )
 
 

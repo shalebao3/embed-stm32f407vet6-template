@@ -42,11 +42,11 @@
 │   │       └── VENDOR_INFO.md
 │   ├── cmake/
 │   ├── src/
-│   │   ├── User/
-│   │   ├── App/
-│   │   ├── Driver/
-│   │   ├── Bsp/
-│   │   └── Common/
+│   │   ├── user/
+│   │   ├── app/
+│   │   ├── driver/
+│   │   ├── bsp/
+│   │   └── common/
 │   ├── CMakeLists.txt
 │   └── CMakePresets.json
 ├── tests/
@@ -58,13 +58,25 @@
 | 目录 | 职责 |
 | --- | --- |
 | `Start` | 启动文件、CMSIS system、链接脚本 |
-| `User` | main、中断入口和项目级错误处理 |
-| `App` | 项目业务流程、状态机、算法编排 |
-| `Driver` | STM32 片内 ADC/TIM/DMA/UART/I2C/SPI 等驱动 |
-| `Bsp` | 板级 GPIO、外部器件与硬件接口映射 |
-| `Common` | 与具体项目无关的通用组件 |
+| `user` | main、中断入口和项目级错误处理 |
+| `app` | 项目业务流程、状态机、算法编排 |
+| `driver` | STM32 片内 ADC/TIM/DMA/UART/I2C/SPI 等驱动 |
+| `bsp` | 板级 GPIO、外部器件与硬件接口映射 |
+| `common` | 与具体项目无关的通用组件 |
 
-当前 `Common` 预置 `Com_Time`，统一提供 1 ms SysTick 时间基准。
+当前 `common` 预置 `com_time.c/.h`，统一提供 1 ms SysTick 时间基准。
+
+### 自定义源码命名规范
+
+自定义目录和文件统一使用小写 `snake_case`，减少 macOS / Linux 大小写差异带来的构建问题：
+
+- `app/app_<功能>.c/.h`，公开 API 使用 `App_<Module>_...`；
+- `driver/drv_<外设>.c/.h`，公开 API 使用 `Drv_<Module>_...`；
+- `bsp/bsp_<器件>.c/.h`，公开 API 使用 `Bsp_<Module>_...`；
+- `common/com_<组件>.c/.h`，公开 API 使用 `Com_<Module>_...`；
+- `user` 中的 `main.c`、`stm32f4xx_it.c/.h` 等 STM32 约定文件保留官方命名。
+
+文件名负责表达模块归属，函数名前缀负责表达“软件层 + 模块 + 动作”。不要混用 `App_Xxx.c`、`bsp_Xxx.c`、`Driver_xxx.c` 等文件命名风格。
 
 ### CMSIS 管理
 
@@ -125,13 +137,13 @@ cmake --build firmware/build/Debug
 
 ```text
 firmware/build/Debug/
-├── embed_foc.elf
-├── embed_foc.hex
-├── embed_foc.bin
-└── embed_foc.map
+├── stm32f407_template.elf
+├── stm32f407_template.hex
+├── stm32f407_template.bin
+└── stm32f407_template.map
 ```
 
-> 当前 `CMAKE_PROJECT_NAME` 仍为 `embed_foc`。通过模板创建新项目后，应将其修改为对应项目名。
+> 当前模板默认 `CMAKE_PROJECT_NAME` 为 `stm32f407_template`。通过模板创建新项目后，应将其修改为对应项目名。
 
 GitHub Actions 会同时验证 Debug / Release，并检查：
 
@@ -145,13 +157,13 @@ GitHub Actions 会同时验证 Debug / Release，并检查：
 
 1. 通过 GitHub 的 **Use this template** 创建新的项目仓库。
 2. 修改 `firmware/CMakeLists.txt` 中的 `CMAKE_PROJECT_NAME`。
-3. 在 `App/` 创建业务入口，例如 `App_xxx.c/.h`。
-4. 按实际方案在 `Driver/` 增加 ADC、TIM、DMA、SPI、I2C 等片内外设驱动。
-5. 按实际硬件在 `Bsp/` 增加板级引脚和外部器件控制。
-6. 在 `main.c` 中完成初始化，并在主循环调用对应的 `App_xxx_Task()`。
+3. 在 `app/` 创建业务入口，例如 `app_xxx.c/.h`，公开 API 使用 `App_Xxx_...` 前缀。
+4. 按实际方案在 `driver/` 增加 ADC、TIM、DMA、SPI、I2C 等片内外设驱动，例如 `drv_tim.c/.h`。
+5. 按实际硬件在 `bsp/` 增加板级引脚和外部器件控制，例如 `bsp_motor.c/.h`。
+6. 在 `main.c` 中完成初始化，并在主循环调用对应的 `App_Xxx_Task()`。
 7. 本地 Debug 构建通过后再提交，由 GitHub Actions 验证 Debug / Release。
 
-CMake 已使用 `CONFIGURE_DEPENDS` 自动发现 `User/App/Driver/Bsp/Common` 下新增的 `.c` 文件，因此通常不需要每增加一个模块就手工修改源码列表。
+CMake 已使用 `CONFIGURE_DEPENDS` 自动发现 `user/app/driver/bsp/common` 下新增的 `.c` 文件，因此通常不需要每增加一个模块就手工修改源码列表。
 
 ## 架构原则
 
@@ -195,7 +207,7 @@ embed-stm32f407vet6-template
           ↓
     embed-xxxx-xxxx
           ↓
- App + Driver + Bsp
+ app + driver + bsp
 ```
 
 这样无需复制旧项目历史，也不需要每次重新搭建启动文件、链接脚本、CMake、VSCode 和 CI 基础环境。

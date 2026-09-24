@@ -1,10 +1,10 @@
 #include "main.h"
-#include "Com_Time.h"
+#include "com_time.h"
 
 /**
- * @brief FOC project entry point.
- * @note The base project intentionally does not bind TIM/ADC/PWM/I2C/SPI yet.
- *       Peripheral configuration will be added after the driver-board pin map is frozen.
+ * @brief Generic STM32F407VET6 project entry point.
+ * @note The template intentionally does not bind project-specific peripherals.
+ *       Add peripheral configuration in driver/bsp after the hardware design is defined.
  */
 int main(void)
 {

@@ -8,7 +8,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-set(CMAKE_PROJECT_NAME embed_foc)
+set(CMAKE_PROJECT_NAME stm32f407_template)
 project(${CMAKE_PROJECT_NAME} LANGUAGES C ASM)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -34,11 +34,11 @@ endif()
 include("${CMAKE_CURRENT_SOURCE_DIR}/Start/startup.cmake")
 
 file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
-    "${CMAKE_SOURCE_DIR}/src/User/*.c"
-    "${CMAKE_SOURCE_DIR}/src/App/*.c"
-    "${CMAKE_SOURCE_DIR}/src/Driver/*.c"
-    "${CMAKE_SOURCE_DIR}/src/Bsp/*.c"
-    "${CMAKE_SOURCE_DIR}/src/Common/*.c"
+    "${CMAKE_SOURCE_DIR}/src/user/*.c"
+    "${CMAKE_SOURCE_DIR}/src/app/*.c"
+    "${CMAKE_SOURCE_DIR}/src/driver/*.c"
+    "${CMAKE_SOURCE_DIR}/src/bsp/*.c"
+    "${CMAKE_SOURCE_DIR}/src/common/*.c"
 )
 
 add_executable(${CMAKE_PROJECT_NAME}
@@ -51,11 +51,11 @@ add_executable(${CMAKE_PROJECT_NAME}
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES SUFFIX ".elf")
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    src/User
-    src/App
-    src/Driver
-    src/Bsp
-    src/Common
+    src/user
+    src/app
+    src/driver
+    src/bsp
+    src/common
     ${STM32_STARTUP_INCLUDE_DIRS}
 )
 
